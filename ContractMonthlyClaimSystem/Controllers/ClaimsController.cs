@@ -28,7 +28,6 @@ namespace ContractMonthlyClaimSystem.Controllers
         public async Task<IActionResult> Index()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            // FIX: Change LecturerId to string and remove .ToString()
             var userClaims = await _context.Claims
                 .Where(c => c.LecturerId == userId)
                 .ToListAsync();
@@ -51,16 +50,19 @@ namespace ContractMonthlyClaimSystem.Controllers
                 claim.Status = "Pending";
                 claim.SubmittedDate = DateTime.Now;
 
-                // FIX: Use actual user ID instead of hardcoded 1
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                claim.LecturerId = userId; // Now string to string
+                claim.LecturerId = userId;
 
-                // File upload logic remains the same...
+                // Handle file upload
                 if (claim.UploadedFile != null && claim.UploadedFile.Length > 0)
                 {
                     var documentsFolder = Path.Combine(_hostEnvironment.WebRootPath, "documents");
+
+                    // Folder to store documents
                     if (!Directory.Exists(documentsFolder))
+                    {
                         Directory.CreateDirectory(documentsFolder);
+                    }
 
                     var uniqueFileName = Guid.NewGuid().ToString() + "_" + claim.UploadedFile.FileName;
                     var filePath = Path.Combine(documentsFolder, uniqueFileName);
@@ -89,7 +91,7 @@ namespace ContractMonthlyClaimSystem.Controllers
             return View(claim);
         }
 
-        // Other methods remain the same...
+        // GET:/Claims/Details/5
         public async Task<IActionResult> Details(int id)
         {
             var claim = await _context.Claims
@@ -99,6 +101,7 @@ namespace ContractMonthlyClaimSystem.Controllers
             return View(claim);
         }
 
+        //GET: /Claims/Review (For Coordinators/Managers to review claims)
         [Authorize(Roles = "Coordinator,Manager")]
         public async Task<IActionResult> Review()
         {
@@ -108,6 +111,7 @@ namespace ContractMonthlyClaimSystem.Controllers
             return View(pendingClaims);
         }
 
+        //POST: /Claims/Approve/5
         [HttpPost]
         [Authorize(Roles = "Coordinator,Manager")]
         public async Task<IActionResult> Approve(int id)
@@ -119,6 +123,7 @@ namespace ContractMonthlyClaimSystem.Controllers
             return RedirectToAction(nameof(Review));
         }
 
+        // POST: /Claims/Reject/5
         [HttpPost]
         [Authorize(Roles = "Coordinator,Manager")]
         public async Task<IActionResult> Reject(int id)
