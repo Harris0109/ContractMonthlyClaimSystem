@@ -1,16 +1,19 @@
-﻿using System.Security.Claims;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace ContractMonthlyClaimSystem.Models
 {
     public class Lecturer
     {
-        public int LecturerId { get; set; } // Primary Key
+        [Key] // Added this line to explicitly define primary key
+        public int LecturerId { get; set; }
+
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
         public string? Email { get; set; }
         public decimal HourlyRate { get; set; }
+        public string? UserId { get; set; }
 
-        // Navigation Property: A Lecturer can have MANY Claims
-        public virtual ICollection<Claim>? Claims { get; set; }
+
+        public virtual ICollection<MonthlyClaims>? Claims { get; set; }
     }
 }

@@ -1,0 +1,61 @@
+﻿@model IEnumerable<ContractMonthlyClaimSystem.Models.MonthlyClaims>
+
+@{
+    ViewData["Title"] = "Review Claims";
+}
+
+<h4>Pending Claims for Review</h4>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        No pending claims to review.
+    </div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Claim ID</th>
+                <th>Lecturer ID</th>
+                <th>Period</th>
+                <th>Hours</th>
+                <th>Amount</th>
+                <th>Submitted Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var claim in Model)
+            {
+                <tr>
+                    <td>@claim.ClaimId</td>
+                    <td>@claim.LecturerId</td>
+                    <td>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(claim.Month) @claim.Year</td>
+                    <td>@claim.TotalHours</td>
+                    <td>@claim.TotalAmount.ToString("C")</td>
+                    <td>@claim.SubmittedDate.ToString("dd/MM/yyyy")</td>
+                    <td>
+                        <a asp-action="Details" asp-route-id="@claim.ClaimId" class="btn btn-info btn-sm">Review</a>
+                        
+                        <form asp-action="Approve" method="post" style="display: inline;">
+                            <input type="hidden" name="id" value="@claim.ClaimId" />
+                            <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                        </form>
+                        
+                        <form asp-action="Reject" method="post" style="display: inline;">
+                            <input type="hidden" name="id" value="@claim.ClaimId" />
+                            <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<div>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">Back to Home</a>
+</div>{
+}

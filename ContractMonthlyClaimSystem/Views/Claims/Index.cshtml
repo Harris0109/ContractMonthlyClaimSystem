@@ -1,0 +1,47 @@
+﻿@model IEnumerable<ContractMonthlyClaimSystem.Models.MonthlyClaims>
+
+@{
+    ViewData["Title"] = "My Claims";
+}
+
+<h4>My Claims</h4>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Claim ID</th>
+            <th>Period</th>
+            <th>Hours</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Submitted Date</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.ClaimId</td>
+                <td>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(item.Month) @item.Year</td>
+                <td>@item.TotalHours</td>
+                <td>@item.TotalAmount.ToString("C")</td>
+                <td>
+                    <span class="badge
+                        @(item.Status == "Approved" ? "bg-success" :
+                          item.Status == "Rejected" ? "bg-danger" : "bg-warning")">
+                        @item.Status
+                    </span>
+                </td>
+                <td>@item.SubmittedDate.ToString("dd/MM/yyyy")</td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@item.ClaimId" class="btn btn-info btn-sm">View Details</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div>
+    <a asp-action="Create" class="btn btn-primary">Submit New Claim</a>
+</div>

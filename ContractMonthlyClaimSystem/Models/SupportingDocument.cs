@@ -1,18 +1,19 @@
-﻿using System.Security.Claims;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace ContractMonthlyClaimSystem.Models
 {
     public class SupportingDocument
     {
+        [Key] // Added this line to explicitly define primary key
         public int DocumentId { get; set; }
         public string? OriginalFileName { get; set; }
-        public string? FilePath { get; set; } // Where the file is saved on the server
+        public string? FilePath { get; set; }
         public DateTime UploadedDate { get; set; }
 
-        // Foreign Key: This document belongs to ONE Claim
+        // Foreign Key
         public int ClaimId { get; set; }
-        
-        // Navigation Property
-        public virtual Claim? Claim { get; set; }
+
+        // FIX: Change Claim to MonthlyClaims
+        public virtual MonthlyClaims? Claim { get; set; }
     }
 }

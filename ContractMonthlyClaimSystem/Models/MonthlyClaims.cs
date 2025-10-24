@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ContractMonthlyClaimSystem.Models
 {
-    public class Claims
+    public class MonthlyClaims
     {
-        public int ClaimId { get; set; } // Primary Key
+        [Key] // Added this line to explicitly define primary key
+        public int ClaimId { get; set; }
 
         [Display(Name = "Month")]
         public int Month { get; set; }
@@ -18,15 +20,17 @@ namespace ContractMonthlyClaimSystem.Models
         [Display(Name = "Total Amount")]
         public decimal TotalAmount { get; set; }
 
-        public string? Status { get; set; } // e.g., Submitted, Approved, Rejected
-        public DateTime SubmittedDate { get; set; }
+        public string Status { get; set; } = "Pending";
 
-        // Foreign Key: This claim belongs to ONE Lecturer
-        public int LecturerId { get; set; }
-        // Navigation Property
+        public DateTime SubmittedDate { get; set; } = DateTime.Now;
+
+        public string LecturerId { get; set; } = string.Empty;
+
         public virtual Lecturer? Lecturer { get; set; }
 
-        // A Claim can have MANY SupportingDocuments
         public virtual ICollection<SupportingDocument>? Documents { get; set; }
+
+        [NotMapped]
+        public IFormFile? UploadedFile { get; set; }
     }
 }
