@@ -51,5 +51,32 @@ namespace ContractMonthlyClaimSystem.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
+
+        public async Task<IActionResult> TestSimpleSave()
+        {
+            try
+            {
+                var claim = new MonthlyClaims
+                {
+                    Month = 1,
+                    Year = 2025,
+                    TotalHours = 40,
+                    HourlyRate = 150,
+                    TotalAmount = 6000,
+                    Status = "Pending",
+                    SubmittedDate = DateTime.Now,
+                    LecturerId = "test-user"
+                };
+
+                _context.Claims.Add(claim);
+                await _context.SaveChangesAsync();
+
+                return Content($"SUCCESS: Claim saved with ID: {claim.ClaimId}");
+            }
+            catch (Exception ex)
+            {
+                return Content($"ERROR: {ex.Message}\n{ex.StackTrace}");
+            }
+        }
     }
 }

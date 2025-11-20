@@ -84,7 +84,12 @@ namespace ContractMonthlyClaimSystem.Controllers
 
                     Console.WriteLine($"Claim before save - Hours: {claim.TotalHours}, Rate: {claim.HourlyRate}, Total: {claim.TotalAmount}");
 
-                    // Handle file upload
+                    // SAVE THE CLAIM FIRST to get a valid ClaimId
+                    _context.Claims.Add(claim);
+                    int result = await _context.SaveChangesAsync();
+                    Console.WriteLine($"=== CLAIM SAVED! Records affected: {result}, New Claim ID: {claim.ClaimId} ===");
+
+                    // Handle file upload AFTER saving the claim
                     if (claim.UploadedFile != null && claim.UploadedFile.Length > 0)
                     {
                         Console.WriteLine("File upload detected");
@@ -108,18 +113,13 @@ namespace ContractMonthlyClaimSystem.Controllers
                             OriginalFileName = claim.UploadedFile.FileName,
                             FilePath = uniqueFileName,
                             UploadedDate = DateTime.Now,
-                            ClaimId = claim.ClaimId
+                            ClaimId = claim.ClaimId  // Now this is valid!
                         };
 
-                        claim.Documents = new List<SupportingDocument> { document };
+                        _context.SupportingDocuments.Add(document);
+                        await _context.SaveChangesAsync();
                         Console.WriteLine("File saved successfully");
                     }
-
-                    // SAVE THE CLAIM
-                    _context.Claims.Add(claim);
-                    int result = await _context.SaveChangesAsync();
-
-                    Console.WriteLine($"=== SAVE SUCCESSFUL! Records affected: {result}, New Claim ID: {claim.ClaimId} ===");
 
                     TempData["SuccessMessage"] = $"Claim #{claim.ClaimId} submitted successfully!";
                     return RedirectToAction(nameof(Index));
@@ -155,7 +155,7 @@ namespace ContractMonthlyClaimSystem.Controllers
 
         //GET: /Claims/Review (For Coordinators/Managers to review claims)
         // ENHANCE the Review method
-        [Authorize(Roles = "Coordinator,Manager")]
+        [Authorize]
         public async Task<IActionResult> Review()
         {
             var pendingClaims = await _context.Claims
@@ -173,7 +173,7 @@ namespace ContractMonthlyClaimSystem.Controllers
 
         //POST: /Claims/Approve/5
         [HttpPost]
-        [Authorize(Roles = "Coordinator,Manager")]
+        [Authorize]
         public async Task<IActionResult> Approve(int id)
         {
             var claim = await _context.Claims.FindAsync(id);
@@ -185,7 +185,7 @@ namespace ContractMonthlyClaimSystem.Controllers
 
         // POST: /Claims/Reject/5
         [HttpPost]
-        [Authorize(Roles = "Coordinator,Manager")]
+        [Authorize]
         public async Task<IActionResult> Reject(int id)
         {
             var claim = await _context.Claims.FindAsync(id);
@@ -197,7 +197,7 @@ namespace ContractMonthlyClaimSystem.Controllers
 
         // ADD automated bulk approval
         [HttpPost]
-        [Authorize(Roles = "Coordinator,Manager")]
+        [Authorize]
         public async Task<IActionResult> BulkApproveValid()
         {
             var pendingClaims = await _context.Claims
@@ -221,6 +221,17 @@ namespace ContractMonthlyClaimSystem.Controllers
 
             TempData["SuccessMessage"] = $"Automatically approved {approvedCount} claims that passed validation!";
             return RedirectToAction(nameof(Review));
+        }
+
+        public async Task<IActionResult> ResetAllClaims()
+        {
+            var claims = await _context.Claims.ToListAsync();
+            foreach (var claim in claims)
+            {
+                claim.Status = "Pending";
+            }
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
     }
 }

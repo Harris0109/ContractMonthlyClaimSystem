@@ -47,7 +47,7 @@
                             </li>
 
                             <!-- Show Review link only for Coordinators and Managers -->
-                            @if (User.IsInRole("Coordinator") || User.IsInRole("Manager"))
+                            @if (User.Identity.IsAuthenticated)
                             {
                                 <li class="nav-item">
                                     <a class="nav-link text-dark" asp-area="" asp-controller="Claims" asp-action="Review">

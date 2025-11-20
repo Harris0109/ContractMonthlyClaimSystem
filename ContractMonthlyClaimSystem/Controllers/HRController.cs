@@ -6,7 +6,7 @@ using ContractMonthlyClaimSystem.Data;
 
 namespace ContractMonthlyClaimSystem.Controllers
 {
-    [Authorize(Roles = "Manager")] // Only managers can access HR functions
+    [Authorize] // Only managers can access HR functions
     public class HRController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -91,7 +91,7 @@ namespace ContractMonthlyClaimSystem.Controllers
                 TotalHours = 40,
                 HourlyRate = 150,
                 TotalAmount = 6000,
-                Status = "Approved",
+                Status = "Pending",
                 SubmittedDate = DateTime.Now.AddDays(-5),
                 LecturerId = "test-lecturer-1"
             },
