@@ -1,61 +1,115 @@
 ﻿@model IEnumerable<ContractMonthlyClaimSystem.Models.MonthlyClaims>
-
 @{
-    ViewData["Title"] = "Review Claims";
+    ViewData["Title"] = "Review Claims - Automated";
 }
 
-<h4>Pending Claims for Review</h4>
+<h4><i class="fas fa-robot"></i> Automated Claim Review</h4>
+
+<!-- Bulk Actions -->
+@if (Model.Any())
+{
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-bolt"></i> Automated Actions</h5>
+        </div>
+        <div class="card-body">
+            <form asp-action="BulkApproveValid" method="post" class="d-inline">
+                <button type="submit" class="btn btn-success me-2">
+                    <i class="fas fa-check-double"></i> Auto-Approve Valid Claims
+                </button>
+            </form>
+            <small class="text-muted">This will automatically approve all claims that pass validation checks</small>
+        </div>
+    </div>
+}
 
 @if (!Model.Any())
 {
     <div class="alert alert-info">
-        No pending claims to review.
+        <i class="fas fa-info-circle"></i> No pending claims to review.
     </div>
 }
 else
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Claim ID</th>
-                <th>Lecturer ID</th>
-                <th>Period</th>
-                <th>Hours</th>
-                <th>Amount</th>
-                <th>Submitted Date</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var claim in Model)
-            {
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
                 <tr>
-                    <td>@claim.ClaimId</td>
-                    <td>@claim.LecturerId</td>
-                    <td>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(claim.Month) @claim.Year</td>
-                    <td>@claim.TotalHours</td>
-                    <td>@claim.TotalAmount.ToString("C")</td>
-                    <td>@claim.SubmittedDate.ToString("dd/MM/yyyy")</td>
-                    <td>
-                        <a asp-action="Details" asp-route-id="@claim.ClaimId" class="btn btn-info btn-sm">Review</a>
-                        
-                        <form asp-action="Approve" method="post" style="display: inline;">
-                            <input type="hidden" name="id" value="@claim.ClaimId" />
-                            <button type="submit" class="btn btn-success btn-sm">Approve</button>
-                        </form>
-                        
-                        <form asp-action="Reject" method="post" style="display: inline;">
-                            <input type="hidden" name="id" value="@claim.ClaimId" />
-                            <button type="submit" class="btn btn-danger btn-sm">Reject</button>
-                        </form>
-                    </td>
+                    <th>Claim ID</th>
+                    <th>Lecturer ID</th>
+                    <th>Period</th>
+                    <th>Hours</th>
+                    <th>Rate</th>
+                    <th>Amount</th>
+                    <th>Auto-Validation</th>
+                    <th>Actions</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var claim in Model)
+                {
+                    <tr>
+                        <td>@claim.ClaimId</td>
+                        <td>
+                            <!-- Show Lecturer ID instead of name for now -->
+                            <span class="text-muted">@claim.LecturerId</span>
+                        </td>
+                        <td>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(claim.Month) @claim.Year</td>
+                        <td>@claim.TotalHours.ToString("F1")</td>
+                        <td>R @claim.HourlyRate.ToString("F2")</td>
+                        <td><strong>R @claim.TotalAmount.ToString("F2")</strong></td>
+                        <td>
+                            @{
+                                // Calculate validation on the fly since we removed the properties
+                                var isValid = claim.TotalHours <= 200 && claim.TotalHours >= 1 &&
+                                claim.HourlyRate <= 500 && claim.HourlyRate >= 50 &&
+                                claim.TotalAmount <= 100000;
+                                var message = isValid ? "Claim passes all automated checks" : "Requires manual review";
+                            }
+
+                            @if (isValid)
+                            {
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check"></i> Valid
+                                </span>
+                                <br />
+                                <small class="text-muted">@message</small>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-exclamation-triangle"></i> Issues
+                                </span>
+                                <br />
+                                <small class="text-danger">@message</small>
+                            }
+                        </td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@claim.ClaimId" class="btn btn-info btn-sm">
+                                <i class="fas fa-eye"></i> Review
+                            </a>
+                            <form asp-action="Approve" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@claim.ClaimId" />
+                                <button type="submit" class="btn btn-success btn-sm">
+                                    <i class="fas fa-check"></i> Approve
+                                </button>
+                            </form>
+                            <form asp-action="Reject" method="post" class="d-inline">
+                                <input type="hidden" name="id" value="@claim.ClaimId" />
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-times"></i> Reject
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
-<div>
-    <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">Back to Home</a>
-</div>{
-}
+<div class="mt-3">
+    <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Home
+    </a>
+</div>

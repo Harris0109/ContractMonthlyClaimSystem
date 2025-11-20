@@ -11,13 +11,13 @@ namespace ContractMonthlyClaimSystem.Data
         {
         }
 
-        // FIX: Add explicit configuration to ignore System.Claims
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-
-            // This tells EF Core to ignore the System.Security.Claims.Claim class
             builder.Ignore<System.Security.Claims.Claim>();
+
+            // REMOVE complex configuration to avoid relationship issues
+            // Let EF Core handle relationships automatically
         }
 
         public DbSet<MonthlyClaims> Claims { get; set; }

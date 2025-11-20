@@ -1,16 +1,19 @@
 using ContractMonthlyClaimSystem.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using Microsoft.EntityFrameworkCore; // ADD THIS
+using ContractMonthlyClaimSystem.Data; // ADD THIS
 
 namespace ContractMonthlyClaimSystem.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
+        private readonly ApplicationDbContext _context; // ADD THIS
 
-        public HomeController(ILogger<HomeController> logger)
+        // ADD THIS CONSTRUCTOR
+        public HomeController(ApplicationDbContext context)
         {
-            _logger = logger;
+            _context = context;
         }
 
         public IActionResult Index()
@@ -20,6 +23,26 @@ namespace ContractMonthlyClaimSystem.Controllers
 
         public IActionResult Privacy()
         {
+            return View();
+        }
+
+        // ADD THIS ACTION METHOD
+        public async Task<IActionResult> TestDatabase()
+        {
+            try
+            {
+                var claimsCount = await _context.Claims.CountAsync();
+                var lecturersCount = await _context.Lecturers.CountAsync();
+
+                ViewBag.ClaimsCount = claimsCount;
+                ViewBag.LecturersCount = lecturersCount;
+                ViewBag.Message = "Database connection successful!";
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Message = $"Database error: {ex.Message}";
+            }
+
             return View();
         }
 

@@ -5,6 +5,7 @@ using ContractMonthlyClaimSystem.Models;
 using ContractMonthlyClaimSystem.Data;
 using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
+using ContractMonthlyClaimSystem.Services;
 
 namespace ContractMonthlyClaimSystem.Controllers
 {
@@ -14,6 +15,7 @@ namespace ContractMonthlyClaimSystem.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IWebHostEnvironment _hostEnvironment;
+        private readonly ClaimValidationService _validationService;
 
         public ClaimsController(ApplicationDbContext context,
                               UserManager<IdentityUser> userManager,
@@ -22,16 +24,32 @@ namespace ContractMonthlyClaimSystem.Controllers
             _context = context;
             _userManager = userManager;
             _hostEnvironment = hostEnvironment;
+            _validationService = new ClaimValidationService();
         }
 
         // GET: /Claims/
         public async Task<IActionResult> Index()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var userClaims = await _context.Claims
-                .Where(c => c.LecturerId == userId)
-                .ToListAsync();
-            return View(userClaims);
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                Console.WriteLine($"=== INDEX: User ID: {userId} ===");
+
+                var userClaims = await _context.Claims
+                    .Where(c => c.LecturerId == userId)
+                    .OrderByDescending(c => c.SubmittedDate)
+                    .ToListAsync();
+
+                Console.WriteLine($"=== INDEX: Found {userClaims.Count} claims ===");
+
+                // REMOVE the test claim creation - we want real data only
+                return View(userClaims);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"=== INDEX ERROR: {ex.Message} ===");
+                return View(new List<MonthlyClaims>());
+            }
         }
 
         // GET: /Claims/Create
@@ -40,54 +58,88 @@ namespace ContractMonthlyClaimSystem.Controllers
             return View();
         }
 
-        // POST: /Claims/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(MonthlyClaims claim)
         {
+            Console.WriteLine("=== CREATE ACTION STARTED ===");
+
             if (ModelState.IsValid)
             {
-                claim.Status = "Pending";
-                claim.SubmittedDate = DateTime.Now;
-
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                claim.LecturerId = userId;
-
-                // Handle file upload
-                if (claim.UploadedFile != null && claim.UploadedFile.Length > 0)
+                try
                 {
-                    var documentsFolder = Path.Combine(_hostEnvironment.WebRootPath, "documents");
+                    Console.WriteLine("=== MODEL IS VALID ===");
 
-                    // Folder to store documents
-                    if (!Directory.Exists(documentsFolder))
+                    // Auto-calculate total amount
+                    claim.CalculateTotal();
+                    Console.WriteLine($"Calculated Total: {claim.TotalAmount}");
+
+                    // Get current user
+                    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                    Console.WriteLine($"User ID: {userId}");
+
+                    claim.LecturerId = userId;
+                    claim.Status = "Pending";
+                    claim.SubmittedDate = DateTime.Now;
+
+                    Console.WriteLine($"Claim before save - Hours: {claim.TotalHours}, Rate: {claim.HourlyRate}, Total: {claim.TotalAmount}");
+
+                    // Handle file upload
+                    if (claim.UploadedFile != null && claim.UploadedFile.Length > 0)
                     {
-                        Directory.CreateDirectory(documentsFolder);
+                        Console.WriteLine("File upload detected");
+                        var documentsFolder = Path.Combine(_hostEnvironment.WebRootPath, "documents");
+
+                        if (!Directory.Exists(documentsFolder))
+                        {
+                            Directory.CreateDirectory(documentsFolder);
+                        }
+
+                        var uniqueFileName = Guid.NewGuid().ToString() + "_" + claim.UploadedFile.FileName;
+                        var filePath = Path.Combine(documentsFolder, uniqueFileName);
+
+                        using (var fileStream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await claim.UploadedFile.CopyToAsync(fileStream);
+                        }
+
+                        var document = new SupportingDocument
+                        {
+                            OriginalFileName = claim.UploadedFile.FileName,
+                            FilePath = uniqueFileName,
+                            UploadedDate = DateTime.Now,
+                            ClaimId = claim.ClaimId
+                        };
+
+                        claim.Documents = new List<SupportingDocument> { document };
+                        Console.WriteLine("File saved successfully");
                     }
 
-                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + claim.UploadedFile.FileName;
-                    var filePath = Path.Combine(documentsFolder, uniqueFileName);
+                    // SAVE THE CLAIM
+                    _context.Claims.Add(claim);
+                    int result = await _context.SaveChangesAsync();
 
-                    using (var fileStream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await claim.UploadedFile.CopyToAsync(fileStream);
-                    }
+                    Console.WriteLine($"=== SAVE SUCCESSFUL! Records affected: {result}, New Claim ID: {claim.ClaimId} ===");
 
-                    var document = new SupportingDocument
-                    {
-                        OriginalFileName = claim.UploadedFile.FileName,
-                        FilePath = uniqueFileName,
-                        UploadedDate = DateTime.Now,
-                        ClaimId = claim.ClaimId
-                    };
-
-                    claim.Documents ??= new List<SupportingDocument>();
-                    claim.Documents.Add(document);
+                    TempData["SuccessMessage"] = $"Claim #{claim.ClaimId} submitted successfully!";
+                    return RedirectToAction(nameof(Index));
                 }
-
-                _context.Claims.Add(claim);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"=== SAVE ERROR: {ex.Message} ===");
+                    Console.WriteLine($"=== STACK TRACE: {ex.StackTrace} ===");
+                    ModelState.AddModelError("", $"Error saving claim: {ex.Message}");
+                }
             }
+            else
+            {
+                Console.WriteLine("=== MODEL INVALID ===");
+                foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    Console.WriteLine($"Model Error: {error.ErrorMessage}");
+                }
+            }
+
             return View(claim);
         }
 
@@ -102,12 +154,20 @@ namespace ContractMonthlyClaimSystem.Controllers
         }
 
         //GET: /Claims/Review (For Coordinators/Managers to review claims)
+        // ENHANCE the Review method
         [Authorize(Roles = "Coordinator,Manager")]
         public async Task<IActionResult> Review()
         {
             var pendingClaims = await _context.Claims
                 .Where(c => c.Status == "Pending")
                 .ToListAsync();
+
+            // Run validation on all pending claims
+            foreach (var claim in pendingClaims)
+            {
+                claim.RunValidation();
+            }
+
             return View(pendingClaims);
         }
 
@@ -132,6 +192,34 @@ namespace ContractMonthlyClaimSystem.Controllers
             if (claim == null) return NotFound();
             claim.Status = "Rejected";
             await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Review));
+        }
+
+        // ADD automated bulk approval
+        [HttpPost]
+        [Authorize(Roles = "Coordinator,Manager")]
+        public async Task<IActionResult> BulkApproveValid()
+        {
+            var pendingClaims = await _context.Claims
+                .Where(c => c.Status == "Pending")
+                .ToListAsync();
+
+            int approvedCount = 0;
+
+            foreach (var claim in pendingClaims)
+            {
+                var (isValid, message) = _validationService.ValidateClaim(claim);
+
+                if (isValid)
+                {
+                    claim.Status = "Approved";
+                    approvedCount++;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Automatically approved {approvedCount} claims that passed validation!";
             return RedirectToAction(nameof(Review));
         }
     }

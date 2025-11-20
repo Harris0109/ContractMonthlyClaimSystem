@@ -1,0 +1,13 @@
+﻿@{
+    ViewData["Title"] = "Database Test";
+}
+
+<h4>Database Connection Test</h4>
+
+<div class="alert alert-info">
+    <h5>@ViewBag.Message</h5>
+    <p>Total Claims in Database: @ViewBag.ClaimsCount</p>
+    <p>Total Lecturers in Database: @ViewBag.LecturersCount</p>
+</div>
+
+<a asp-action="Index" class="btn btn-primary">Back to Home</a>

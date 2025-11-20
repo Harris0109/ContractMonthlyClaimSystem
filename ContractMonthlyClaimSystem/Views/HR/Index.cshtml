@@ -1,0 +1,93 @@
+﻿@model IEnumerable<ContractMonthlyClaimSystem.Models.MonthlyClaims>
+@{
+    ViewData["Title"] = "HR Dashboard";
+}
+
+<h4><i class="fas fa-chart-line"></i> HR Dashboard</h4>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+@if (!Model.Any())
+{
+    <div class="card">
+        <div class="card-body text-center">
+            <h5 class="card-title">No Approved Claims Found</h5>
+            <p class="card-text">There are no approved claims to display in the HR dashboard.</p>
+            <div class="mt-3">
+                <a asp-action="CreateTestHRData" class="btn btn-primary me-2">
+                    <i class="fas fa-plus"></i> Create Test HR Data
+                </a>
+                <a asp-controller="Claims" asp-action="Review" class="btn btn-success">
+                    <i class="fas fa-tasks"></i> Review Pending Claims
+                </a>
+            </div>
+            <div class="mt-3">
+                <small class="text-muted">The HR dashboard displays claims that have been approved by coordinators/managers.</small>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Approved Claims</h5>
+                    <h2>@Model.Count()</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Total Amount</h5>
+                    <h2>R @Model.Sum(c => c.TotalAmount).ToString("F2")</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Actions</h5>
+                    <a asp-action="GeneratePaymentReport" class="btn btn-light btn-sm mb-2">Generate Report</a>
+                    <a asp-action="ManageLecturers" class="btn btn-light btn-sm mb-2">Manage Lecturers</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h5>Approved Claims for Payment</h5>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Claim ID</th>
+                <th>Lecturer ID</th>
+                <th>Period</th>
+                <th>Hours</th>
+                <th>Rate</th>
+                <th>Amount</th>
+                <th>Submitted</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var claim in Model)
+            {
+                <tr>
+                    <td>@claim.ClaimId</td>
+                    <td>
+                        <span class="text-muted">@claim.LecturerId</span>
+                    </td>
+                    <td>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(claim.Month) @claim.Year</td>
+                    <td>@claim.TotalHours.ToString("F1")</td>
+                    <td>R @claim.HourlyRate.ToString("F2")</td>
+                    <td><strong>R @claim.TotalAmount.ToString("F2")</strong></td>
+                    <td>@claim.SubmittedDate.ToString("dd/MM/yyyy")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

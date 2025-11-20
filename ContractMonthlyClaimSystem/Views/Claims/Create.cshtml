@@ -1,60 +1,124 @@
 ﻿@model ContractMonthlyClaimSystem.Models.MonthlyClaims
-
 @{
     ViewData["Title"] = "Submit New Claim";
 }
 
 <h4>Submit New Claim</h4>
 <hr />
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 <div class="row">
-    <div class="col-md-6">
-        <form asp-action="Create" method="post" enctype="multipart/form-data">
+    <div class="col-md-8">
+        <form asp-action="Create" method="post" enctype="multipart/form-data" id="claimForm">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label asp-for="Month" class="form-label"></label>
+                        <select asp-for="Month" class="form-control" id="monthSelect">
+                            <option value="">Select Month</option>
+                            @for (int i = 1; i <= 12; i++)
+                            {
+                                <option value="@i">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Month" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label asp-for="Year" class="form-label"></label>
+                        <input asp-for="Year" class="form-control" id="yearInput" value="@DateTime.Now.Year" />
+                        <span asp-validation-for="Year" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label asp-for="TotalHours" class="form-label"></label>
+                        <input asp-for="TotalHours" class="form-control" id="hoursInput"
+                               type="number" step="0.5" min="1" max="744" />
+                        <span asp-validation-for="TotalHours" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label asp-for="HourlyRate" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text">R</span>
+                            <input asp-for="HourlyRate" class="form-control" id="rateInput"
+                                   type="number" step="0.01" min="50" max="1000" />
+                        </div>
+                        <span asp-validation-for="HourlyRate" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Auto-calculated Total Amount Display -->
             <div class="form-group mb-3">
-                <label asp-for="Month" class="control-label"></label>
-                <select asp-for="Month" class="form-control">
-                    <option value="">Select Month</option>
-                    @for (int i = 1; i <= 12; i++)
-                    {
-                        <option value="@i">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
-                    }
-                </select>
-                <span asp-validation-for="Month" class="text-danger"></span>
+                <label class="form-label"><strong>Total Amount</strong></label>
+                <div class="alert alert-info">
+                    <h4 class="mb-0" id="totalAmountDisplay">R 0.00</h4>
+                    <small class="text-muted">Calculated automatically: Hours × Hourly Rate</small>
+                </div>
+                <input type="hidden" asp-for="TotalAmount" id="totalAmountInput" />
+            </div>
+
+            <!-- File Upload Section -->
+            <div class="form-group mb-3">
+                <label class="form-label">Supporting Document</label>
+                <input type="file" asp-for="UploadedFile" class="form-control"
+                       accept=".pdf,.docx,.xlsx,.jpg,.png" />
+                <small class="form-text text-muted">
+                    Upload PDF, DOCX, XLSX, JPG, or PNG files (Max 5MB)
+                </small>
+                <span asp-validation-for="UploadedFile" class="text-danger"></span>
             </div>
 
             <div class="form-group mb-3">
-                <label asp-for="Year" class="control-label"></label>
-                <input asp-for="Year" class="form-control" value="@DateTime.Now.Year" />
-                <span asp-validation-for="Year" class="text-danger"></span>
-            </div>
-
-            <div class="form-group mb-3">
-                <label asp-for="TotalHours" class="control-label"></label>
-                <input asp-for="TotalHours" class="form-control" />
-                <span asp-validation-for="TotalHours" class="text-danger"></span>
-            </div>
-
-            <div class="form-group mb-3">
-                <label asp-for="TotalAmount" class="control-label"></label>
-                <input asp-for="TotalAmount" class="form-control" />
-                <span asp-validation-for="TotalAmount" class="text-danger"></span>
-            </div>
-
-            <!-- NEW: File Upload Section -->
-            <div class="form-group mb-3">
-                <label class="control-label">Supporting Document</label>
-                <input type="file" asp-for="UploadedFile" class="form-control" />
-                <small class="form-text text-muted">Upload PDF, DOCX, or XLSX files (Max 5MB)</small>
-            </div>
-
-            <div class="form-group mb-3">
-                <button type="submit" class="btn btn-success">
+                <button type="submit" class="btn btn-success" id="submitBtn">
                     <i class="fas fa-paper-plane"></i> Submit Claim
                 </button>
                 <a asp-action="Index" class="btn btn-secondary">Back to List</a>
             </div>
         </form>
+    </div>
+
+    <!-- Calculation Preview Sidebar -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Calculation Preview</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">Hours Worked</small>
+                    <div id="previewHours">0</div>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">Hourly Rate</small>
+                    <div id="previewRate">R 0.00</div>
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <small class="text-muted">Total Amount</small>
+                    <div class="h5 text-success" id="previewTotal">R 0.00</div>
+                </div>
+                <div class="alert alert-warning small">
+                    <i class="fas fa-info-circle"></i> Amount updates automatically as you type
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -62,4 +126,63 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    <script>
+        $(document).ready(function () {
+            // Get input elements
+            const hoursInput = $('#hoursInput');
+            const rateInput = $('#rateInput');
+            const totalDisplay = $('#totalAmountDisplay');
+            const totalInput = $('#totalAmountInput');
+            const previewHours = $('#previewHours');
+            const previewRate = $('#previewRate');
+            const previewTotal = $('#previewTotal');
+            const submitBtn = $('#submitBtn');
+
+            // Function to calculate and update total
+            function calculateTotal() {
+                const hours = parseFloat(hoursInput.val()) || 0;
+                const rate = parseFloat(rateInput.val()) || 0;
+                const total = hours * rate;
+
+                // Update displays
+                const formattedTotal = 'R ' + total.toFixed(2);
+                totalDisplay.text(formattedTotal);
+                totalInput.val(total.toFixed(2));
+                previewHours.text(hours.toFixed(1) + ' hours');
+                previewRate.text('R ' + rate.toFixed(2));
+                previewTotal.text(formattedTotal);
+
+                // Enable/disable submit button based on valid calculation
+                if (hours > 0 && rate > 0 && total > 0) {
+                    submitBtn.prop('disabled', false);
+                } else {
+                    submitBtn.prop('disabled', true);
+                }
+            }
+
+            // Event listeners for real-time calculation
+            hoursInput.on('input', calculateTotal);
+            rateInput.on('input', calculateTotal);
+
+            // Form submission validation
+            $('#claimForm').on('submit', function (e) {
+                const hours = parseFloat(hoursInput.val()) || 0;
+                const rate = parseFloat(rateInput.val()) || 0;
+
+                if (hours <= 0 || rate <= 0) {
+                    e.preventDefault();
+                    alert('Please enter valid hours and hourly rate before submitting.');
+                    return false;
+                }
+
+                // Ensure total is calculated before submission
+                calculateTotal();
+                return true;
+            });
+
+            // Initialize calculation on page load
+            calculateTotal();
+        });
+    </script>
 }
